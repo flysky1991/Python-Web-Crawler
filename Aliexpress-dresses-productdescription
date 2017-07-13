@@ -91,6 +91,5 @@ for i in range(1,6):
     print("正在下载第{}页数据...".format(i))
     #速卖通女装信息
     url = "https://www.aliexpress.com/category/200003482/dresses" + str(i) + ".html"
-    #url = 'file:///C:/Users/Administrator/Desktop/3.html'
     crawl(url,i)
     #time.sleep(random.randint(901,999))
