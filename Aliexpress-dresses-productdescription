@@ -1,0 +1,96 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jul 13 14:21:14 2017
+
+@author: Administrator
+"""
+
+import re
+import urllib.request
+from bs4 import BeautifulSoup
+import time
+import random
+import pymysql.cursors
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
+
+def crawlDetailPage(url,page,i):
+    '''
+    主要功能：提取商品描述信息(主要是各种图片)
+    '''
+    
+    #提取url链接中的商品ID
+    pattern = re.compile("\/(\d*)\.htm")
+    res = pattern.search(url).groups()
+    #print (res[0])
+    productId = res[0]
+    url2 ='https://www.aliexpress.com/getDescModuleAjax.htm?productId=' + str(productId)
+    print(url2)
+    html1 = urllib.request.urlopen(url2).read()
+    html1 = str(html1)
+    soup1 = BeautifulSoup(html1,'lxml')
+    result1 = soup1.find_all('img')
+    #print(result1[0]['src'])
+    j = 1
+    for k in result1:
+        imgurl = k['src']
+        if 'http' not in imgurl:
+            imgurl = "https:" + imgurl
+        print("第{}张图片链接为:{}".format(j,imgurl))
+        if i < 10:
+            if j < 10:
+                imagename = "D:/python/data/aliexpress/dresses/" + str(page) + '0' + str(i) + '0' + str(j) +".jpg"
+            elif j >=10:
+                imagename = "D:/python/data/aliexpress/dresses/" + str(page) + '0' + str(i) + str(j) +".jpg"
+        elif i >=10:
+            if j < 10:
+                imagename = "D:/python/data/aliexpress//dresses/" + str(page) +  str(i) + '0' + str(j) +".jpg"
+            elif j >=10:
+                imagename = "D:/python/data/aliexpress/dresses/" + str(page) + str(i) + str(j) +".jpg"
+        urllib.request.urlretrieve(imgurl,filename=imagename)
+        j = j + 1
+  
+    
+
+def crawl(url,page):
+    #url = "file:///C:/Users/Administrator/Desktop/6.html"
+    html1 = urllib.request.urlopen(url).read()
+    html1 = str(html1)
+    #print(html1)
+    
+    soup1 = BeautifulSoup(html1,'lxml')
+    #提取出商品列表信息
+    result1 = soup1.find_all(attrs={"id":"list-items"})
+    #print(result1)
+    result1 = str(result1)
+        
+    '''
+    目标：提取每个商品的图片
+    方法：先通过先通过BeautifulSoup确定商品图片所在标签位置，
+          然后再提取出商品图片链接
+    '''
+    soup2 = BeautifulSoup(result1,'lxml') 
+    result2 = soup2.find_all(class_='picRind')
+    for i in range(0,43):
+        #if i % 3 = 0:
+        result3 = result2[i]['href']
+        #print(result3)
+        detailurl = "https:" + result3
+        print("第{}件商品的详情页链接为:".format(i))
+        print(detailurl)
+        #print(result2[43]['href'])
+        crawlDetailPage(detailurl,page,i)
+        t = random.randint(10,15)
+        print("休眠时间为:{}s".format(t))
+        time.sleep(t)
+       
+
+
+for i in range(1,6):
+    print("正在下载第{}页数据...".format(i))
+    #速卖通女装信息
+    url = "https://www.aliexpress.com/category/200003482/dresses" + str(i) + ".html"
+    #url = 'file:///C:/Users/Administrator/Desktop/3.html'
+    crawl(url,i)
+    #time.sleep(random.randint(901,999))
