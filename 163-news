@@ -1,0 +1,73 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jul 17 15:46:30 2017
+
+@author: Administrator
+"""
+from bs4 import BeautifulSoup
+import urllib.request
+import http.cookiejar
+
+#url = 'http://news.163.com/17/0717/10/CPHORRIE0001899O.html'
+url = 'http://news.163.com/17/0717/16/CPIES9NG000187V9.html'
+
+'''
+1.将网易新闻页面以html的形式保存到本地
+'''
+
+#以字典的形式设置headers
+
+headers = {"Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+           "Accept-Language": "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3",
+           "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0",
+           "Connection": "keep-alive",
+           "referer": "http://www.163.com/"}
+
+#设置cookie
+cjar = http.cookiejar.CookieJar()
+proxy = urllib.request.ProxyHandler({'http':"127.0.0.1:8888"})
+opener = urllib.request.build_opener(proxy,urllib.request.HTTPHandler,urllib.request.HTTPCookieProcessor(cjar))
+
+#建立空列表，为了以指定格式存储头信息
+headall = []
+#通过for循环遍字典，构造出指定格式的Headers信息
+for key,value in headers.items():
+    item = (key,value)
+    headall.append(item)
+    
+#将指定格式的headers信息添加好
+opener.addheaders = headall
+
+#将opener安装为全局
+urllib.request.install_opener(opener)
+data = urllib.request.urlopen(url).read()
+fhandle = open("D:/python/data/163/1.html","wb")
+fhandle.write(data)
+fhandle.close()
+
+'''
+2.提取网易新闻标题和正文内容信息
+'''
+
+html1 = urllib.request.urlopen(url).read().decode('gbk')
+html1 = str(html1)
+
+soup1 = BeautifulSoup(html1,'lxml')
+#提取新闻标题
+result1 = soup1.find_all("h1")
+title = result1[0].string
+print("新闻标题为:{}".format(title))
+
+soup2 = BeautifulSoup(html1,'lxml')
+#提取正文所在区块
+result2 = soup1.find_all(attrs={"class":"post_text"})
+result2 = str(result2)
+#print(result2)
+soup3 = BeautifulSoup(html1,'lxml')
+#提取正文文本内容
+result3= soup1.find_all("p")
+
+content = result3[5:8]
+print("新闻正文内容为:")
+for i in content:
+    print(i.string)
