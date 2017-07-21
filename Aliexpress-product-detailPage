@@ -1,0 +1,269 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jul 21 13:27:08 2017
+
+@author: Administrator
+"""
+
+import re
+import urllib.request
+from bs4 import BeautifulSoup
+import time
+import random
+import pymysql.cursors
+
+
+def crawlDetailPage(url,page,i):
+    '''
+    主要功能：提取商品详情页面的各项属性值,并将各项属性值写入mysql数据库中
+    '''
+    
+    #读取商品详情页面信息
+    html1 = urllib.request.urlopen(url).read()
+    html1 = str(html1)
+    #print(html1)
+    
+    '''
+    1.目标：提取商品标题、商品订单数、商品价格区间
+    '''
+    #提取商品标题信息
+    soup1 = BeautifulSoup(html1,'lxml')
+    result1 = soup1.find_all('h1')
+    #print(result1[1].string)
+    ptitle = result1[1].string
+    print("该商品标题为:" + ptitle)
+
+    #获取订单数
+    soup12 = BeautifulSoup(html1,'lxml')
+    result12 = soup12.find_all(id="j-order-num")
+    #print(result12[0].string)
+    porders = result12[0].string
+    #porders = str(porders)
+    pat1 = "\d{5}|\d{4}|\d{3}|\d{2}|\d{1}"
+    porders = re.compile(pat1).findall(porders)
+    #print(porders)
+    porders = str(porders[0])
+    print("该商品的订单数为:" + porders)
+    
+    #获取商品价格区间
+    soup13 = BeautifulSoup(html1,'lxml')
+    result13 = soup13.find_all(attrs={"class":"p-price"})
+    #print(result13[0].string)
+    
+    #根据标签属性值提取商品折扣价或最低和最高价格
+    if result13[0].string:
+        price = result13[0].string
+        print("该商品的价格为:${}".format(price))
+    else:
+        result13 = soup13.find_all(itemprop="lowPrice")
+        #result14 = soup13.find_all(itemprop="highPrice")
+        price = result13[0].string
+        #phighPrice = result14[0].string
+        print("该商品的价格区间为:${}".format(price))
+    
+    '''
+    2.目标：提取商品描述信息
+    '''
+    
+    soup2 = BeautifulSoup(html1,'lxml')
+    result2 = soup2.find_all(attrs={"class":"product-property-list util-clearfix"})
+    #print(result2)
+    result2 = str(result2)
+    
+    soup22 = BeautifulSoup(result2,'lxml')
+    result22 = soup22.find_all(attrs={"class":"propery-title"})
+    #print(result22[0])
+    lens = len(result22)
+    #print(len(result22))
+    soup23 = BeautifulSoup(result2,'lxml')
+    result23 = soup23.find_all(attrs={"class":"propery-des"})
+    #print(result23[0])
+    #print(len(result23))
+    #初始化商品描述字典
+    d = ""
+    for j in range(lens):
+        #Descrption = str(result22[i]) + str(result23[i])
+        key = result22[j].string
+        value = result23[j].string
+        d1 = {key:value}
+        d1 = str(d1)
+        d += d1
+        #print(result22[i].string,result23[i].string)
+    print("商品描述信息为:" + d)
+        
+    
+    '''
+    3.目标：提取商品大图
+    '''
+    
+    #获取商品大图
+    soup3 = BeautifulSoup(html1,'lxml')
+    #根据标签属性值提取出商品sku信息
+    result3 = soup3.find_all(attrs={"class":"ui-image-viewer-thumb-wrap"})
+    #print(result3)
+    result3 = str(result3)
+    soup32 = BeautifulSoup(result3,'lxml')
+    result32 = soup32.find_all('img')
+    #商品大图
+    image = result32[0]['src']
+    print("该商品的图片链接为:{}".format(image))
+    
+    
+    '''
+    4.目标：提取商品重量、商品尺寸
+    '''
+    
+    pat4 = '<ul class="product-packaging-list util-clearfix">.+?</ul>'
+    result4 = re.compile(pat4).findall(html1)
+    #print(result3[0])
+
+    result42 = result4[0]
+    result42 = str(result42)
+    soup4 = BeautifulSoup(result42,'lxml') 
+    result43 = soup4.find_all('li')
+    #print(result43[1])
+
+    #进一步筛选出重量信息
+    result44 = result43[1]
+    result44 = str(result44)
+    soup42 = BeautifulSoup(result44,'lxml') 
+    result45 = soup42.find_all('span')
+    #print(result35[1]['rel'])
+    pweight = result45[1]['rel']
+    print("该商品重量为:" + pweight + "kg.")
+
+    #进一步筛选出尺寸信息
+    result46 = result43[2]
+    result46 = str(result46)
+    soup43 = BeautifulSoup(result46,'lxml') 
+    result47 = soup43.find_all('span')
+    #print(result37[1].string)
+    psize = result47[1].string
+    print("该商品尺寸为：" + psize)
+    
+    
+    '''
+    5.目标：提取商品附图
+    '''
+    
+    #通过正则表达式提取出商品详情页链接中的productId
+    pat5 = re.compile("\/(\d*)\.htm")
+    res = pat5.search(url).groups()
+    #print (res[0])
+    productId = res[0]
+    
+    #Aliexpress动态加载的商品描述部分url有着固定的格式，通过改变productId，即可提取出对应商品的附图
+    url2 ='https://www.aliexpress.com/getDescModuleAjax.htm?productId=' + str(productId)
+    print("商品描述部分的链接为:{}".format(url2))
+    
+    html2 = urllib.request.urlopen(url2).read()
+    html2 = str(html2)
+    
+    #通过BeautifulSoup提取出其中的图片
+    soup5 = BeautifulSoup(html2,'lxml')
+    result5 = soup5.find_all('img')
+    #print(result1[0]['src'])
+    
+    #初始化一个长度为20的空列表,用于存放提取出来的图片链接
+    lst = ['0' for n in range(20)]
+    j = 1
+    for k in result5:
+        imgurl = k['src']
+        #由于商品描述部分图片太多,故通过if语句来限定提取图片的数目
+        if j <= 20:
+            if 'http' not in imgurl:
+                imgurl = "https:" + imgurl
+            lst[j-1] = imgurl
+            print("第{}张图片链接为:{}".format(j,imgurl))
+            if i < 10:
+                if j < 10:
+                    imagename = "D:/python/data/aliexpress/consumer-electronics/wearable-devices/" + str(page) + '0' + str(i) + '0' + str(j) +".jpg"
+                elif j >=10:
+                    imagename = "D:/python/data/aliexpress/consumer-electronics/wearable-devices/" + str(page) + '0' + str(i) + str(j) +".jpg"
+            elif i >=10:
+                if j < 10:
+                    imagename = "D:/python/data/aliexpress/consumer-electronics/wearable-devices/" + str(page) +  str(i) + '0' + str(j) +".jpg"
+                elif j >=10:
+                    imagename = "D:/python/data/aliexpress/consumer-electronics/wearable-devices/" + str(page) + str(i) + str(j) +".jpg"
+            urllib.request.urlretrieve(imgurl,filename=imagename)
+        j = j + 1
+    #print("图片链接为：",lst)
+    
+    
+    #确定id编号
+    if i < 10:
+        if page < 10:
+            i = "0" + str(page) + "0" + str(i)
+        else:
+            i = str(page) + "0" + str(i)
+    elif i >= 10:
+        if page < 10:
+            i = "0" + str(page) + str(i)
+        else:
+            i = str(page) + str(i)
+    
+    '''
+    数据库操作
+    '''
+    
+    #获取数据库链接
+    connection  = pymysql.connect(host = 'localhost',
+                                  user = 'root',
+                                  password = '123456',
+                                  db = 'consumer&electronics',
+                                  charset = 'utf8mb4')
+    try:
+        #获取会话指针
+        with connection.cursor() as cursor:
+            #创建sql语句
+            sql = "insert into `wearable-devices` (`id`,`url`,`title`,`orders`,`description`,`price`,`image`,`weight`,`size`,`image1`,`image2`,`image3`,`image4`,`image5`,`image6`,`image7`,`image8`,`image9`,`image10`,`image11`,`image12`,`image13`,`image14`,`image15`,`image16`,`image17`,`image18`,`image19`,`image20`) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+            
+            #执行sql语句
+            cursor.execute(sql,(i,url,ptitle,porders,d,price,image,pweight,psize,lst[0],lst[1],lst[2],lst[3],lst[4],lst[5],lst[6],lst[7],lst[8],lst[9],lst[10],lst[11],lst[12],lst[13],lst[14],lst[15],lst[16],lst[17],lst[18],lst[19]))
+            
+            #提交数据库
+            connection.commit()
+    finally:
+        connection.close()
+    
+
+def crawl(url,page):
+    html1 = urllib.request.urlopen(url).read()
+    html1 = str(html1)
+    #print(html1)
+    
+    soup1 = BeautifulSoup(html1,'lxml')
+    #提取出商品列表信息
+    result1 = soup1.find_all(attrs={"id":"list-items"})
+    #print(result1)
+    result1 = str(result1)
+        
+    '''
+    目标：提取每个商品的详情页链接
+    方法：先通过先通过BeautifulSoup确定商品图片所在标签位置，
+          然后再提取出商品详情页链接
+    '''
+    soup2 = BeautifulSoup(result1,'lxml') 
+    result2 = soup2.find_all(class_='picRind')
+    for i in range(28,48):
+        result3 = result2[i]['href']
+        #print(result3)
+        detailurl = "https:" + result3
+        print("第{}件商品的详情页链接为:".format(i))
+        print(detailurl)
+        #调用crawlDetailPage()函数,获取商品详情信息
+        crawlDetailPage(detailurl,page,i)
+        t = random.randint(31,36)
+        print("休眠时间为:{}s".format(t))
+        time.sleep(t)
+       
+
+
+for i in range(1,2):
+    print("正在下载第{}页数据...".format(i))
+    #速卖通某一类别的url链接
+    url = "https://www.aliexpress.com/category/200084019/wearable-devices/" + str(i) + ".html"
+    #url = 'file:///C:/Users/Administrator/Desktop/1.html'
+    crawl(url,i)
+    
+    
