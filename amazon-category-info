@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jul 31 15:48:24 2017
+
+@author: Administrator
+"""
+
+import urllib.request
+from bs4 import BeautifulSoup
+import pymysql.cursors
+
+
+url = 'https://www.amazon.com/gp/site-directory/ref=nav_shopall_btn'
+#读取网页信息
+html1 = urllib.request.urlopen(url).read()
+html1 = str(html1)
+
+'''
+Amazon商品类别列表可分为4大区块、23个大类，每个大类下面又包含若干小类，
+在提取信息时，注意分层分步进行
+'''
+soup1 = BeautifulSoup(html1,'lxml')
+result1 = soup1.find_all(attrs={"class":"a-column a-span3 fsdColumn fsdColumn_3"})
+k = 1
+for i in range(0,4):
+    #print(result1[0])
+    result2 = result1[i]
+    result2 = str(result2)
+    soup21 = BeautifulSoup(result2,'lxml')
+    result21 = soup21.find_all("a")
+    for content in result21:
+        #提取商品小类目名称和链接
+        categoryName = content.string
+        print("类别{}为:{}".format(k,categoryName))
+        categoryLink = "https://www.amazon.com" + content['href']
+        print("链接为:{}".format(categoryLink))
+        k = k + 1
+        '''
+        数据库操作
+        '''
+
+        #获取数据库链接
+        connection  = pymysql.connect(host = 'localhost',
+                                  user = 'root',
+                                  password = '123456',
+                                  db = 'amazon',
+                                  charset = 'utf8mb4')
+        try:
+            #获取会话指针
+            with connection.cursor() as cursor:
+                #创建sql语句
+                sql = "insert into `categoryinfo` (`categoryName`,`categoryLink`) values (%s,%s)"
+
+                #执行sql语句
+                cursor.execute(sql,(categoryName,categoryLink))
+
+                #提交数据库
+                connection.commit()
+        finally:
+            connection.close()
