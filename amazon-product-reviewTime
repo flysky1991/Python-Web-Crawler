@@ -13,10 +13,10 @@ import pymysql.cursors
 
 
 def crawl(url,i):
-
+    #读取网页信息
     html1 = urllib.request.urlopen(url).read()
     html1 = str(html1)
-
+    #从网页信息中提取出商品评论时间
     soup1 = BeautifulSoup(html1,'lxml')
     result1 = soup1.find_all(attrs={"data-hook":"review-date"})
     print(result1[0].string)
