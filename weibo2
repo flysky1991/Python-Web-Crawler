@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug  1 19:55:55 2017
+
+@author: Administrator
+"""
+
+import requests
+import urllib.request
+from bs4 import BeautifulSoup
+import json
+import time
+import random
+import pymysql.cursors
+
+
+'''
+1.爬取知乎的新浪微博
+'''
+
+url = "https://m.weibo.cn/api/container/getIndex?type=uid&value=1904769205&containerid=1076031904769205"
+
+
+req = requests.get(url)
+jsondata = req.text
+data = json.loads(jsondata)
+
+weibo
+
+for i in data['cards']:
+    contentUrl = i['scheme']
+    createdTime = i['mblog']['created_at']
+    content = i['mblog']['text']
+    soup1 = BeautifulSoup(content,'lxml')
+    text = soup1.get_text()
+    
+    textLength = i['mblog']['textLength']
+    source = i['mblog']['source']
+    userId = i['mblog']['user']['id']
+    userName = i['mblog']['user']['screen_name']
+    userFollowers = i['mblog']['user']['followers_count']
+    foward = i['mblog']['reposts_count']
+    comment = i['mblog']['comments_count']
+    like = i['mblog']['attitudes_count']
+    
+    
+    print("该微博的链接为:{}".format(contentUrl))
+    print("创建于:{}".format(createdTime))
+    print("正文内容为:{}".format(text))
+    print("长度为:{}".format(textLength))
+    print("来源为:{}".format(source))
+    print("用户ID为:{}".format(userId))
+    print("用户名为:{}".format(userName))
+    print("用户粉丝数:{}".format(userFollowers))
+    print("转发数:{}".format(foward))
+    print("评论数:{}".format(comment))
+    print("点赞数:{}".format(like))
+    
+    
+
