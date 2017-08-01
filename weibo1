@@ -1,0 +1,52 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug  1 17:11:10 2017
+
+@author: Administrator
+"""
+
+import requests
+from bs4 import BeautifulSoup
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
+
+#放入自己的cookie信息
+cook = {"Cookie":"_T_WM=abd2d948df0dc8be3086c78ce69a53d3"} 
+
+'''
+1.爬取孟非的新浪微博
+'''
+#url = "https://weibo.cn/dahebao"
+url = "https://weibo.cn/jsbcmf?oid=4135986562268031"
+
+html = requests.get(url,cookies=cook).content
+
+#使用Beautiful来解析网页内容。
+soup1 =BeautifulSoup(html,"html.parser")
+
+result1 = soup1.find_all('div',attrs={"class" : "c"})
+
+#print(result1[3])
+
+content = result1[3]
+content = str(content)
+
+'''
+2.目标：从每条微博内容中提取微博正文、点赞、转发、评论数
+'''
+
+soup2 =BeautifulSoup(content,"html.parser")
+
+result21 = soup2.find_all('span',attrs={"class" : "ctt"})
+
+text = result21[0].get_text()
+print("该微博的正文为:{}".format(text))
+
+result22 = soup2.find_all("a")
+
+likes = result22[8].string
+forward = result22[9].string
+comment = result22[10].string
+
+print("点赞数为:{},转发数为:{},评论数为:{}".format(likes,forward,comment))
