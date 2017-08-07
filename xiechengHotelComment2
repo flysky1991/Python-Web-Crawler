@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Aug  7 21:05:03 2017
+
+@author: Administrator
+"""
+
+import urllib.request
+from bs4 import BeautifulSoup
+import re
+import random
+import pymysql.cursors
+
+url = "http://hotels.ctrip.com/hotel/435383.html?isFull=F#ctm_ref=hod_sr_lst_dl_n_1_1"
+
+html1 = urllib.request.urlopen(url).read().decode('utf-8')
+
+#1.获取酒店名称信息
+soup1 = BeautifulSoup(html1,'lxml')
+
+result1 = soup1.find_all('h2')
+hotelName = result1[0].string
+print("酒店名称为:{}".format(hotelName))
+
+
+#2.获取酒店星级信息
+soup2 = BeautifulSoup(html1,'lxml')
+
+result2 = soup2.find_all(attrs={"class":"grade"})
+
+#print(result1)
+result2 =str(result2)
+
+soup22 = BeautifulSoup(result2,'lxml')
+
+result22 = soup22.find_all('span')
+hotelStar = result22[0]['title']
+print("酒店星级为:{}".format(hotelStar))
+
+#3.酒店最低价
+#soup3 = BeautifulSoup(html1,'lxml')
+
+#result3 = soup2.find_all(attrs={"class":"staring_price"})
+
+#print(result3)
+
+
+soup5 = BeautifulSoup(html1,'lxml')
+
+result5 = soup5.find_all(attrs={"class":"bar_left"})
+print(result5)
+
+'''
+评论数据
+'''
+soup6 = BeautifulSoup(html1,'lxml')
+
+result6 = soup6.find_all(attrs={"class":"comment_detail_list"})
+
+#print(result6)
+
+result6 = str(result6)
+
+soup61 = BeautifulSoup(result6,'lxml')
+
+result61 = soup61.find_all(attrs={"class":"name"})
+print(result61)
+
+soup62 = BeautifulSoup(result6,'lxml')
+
+result62 = soup62.find_all(attrs={"class":"n"})
+#print(result62)
