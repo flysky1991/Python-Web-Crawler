@@ -1,0 +1,102 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Aug  7 21:05:03 2017
+
+@author: Administrator
+"""
+
+import urllib.request
+from bs4 import BeautifulSoup
+import re
+import random
+import pymysql.cursors
+
+#url1 = 'http://m.ctrip.com/html5/hotel/HotelDetail/435383.html'
+url1 = 'http://hotels.ctrip.com/hotel/435383.html'
+
+html1 = urllib.request.urlopen(url1).read().decode('utf-8')
+
+soup11 = BeautifulSoup(html1,'lxml')
+
+result01 = soup11.find_all(attrs={"itemprop":"name"})
+hotelName = result01[0].string
+print("酒店名字为:{}".format(hotelName))
+
+result02 = soup11.find_all("span")
+hotelStar = result02
+#print(hotelStar)
+#print("酒店星级为:{}".format(hotelStar))
+
+
+
+url2 = 'http://m.ctrip.com/html5/hotel/HotelDetail/dianping/435383.html'
+
+html2 = urllib.request.urlopen(url2).read().decode('utf-8')
+
+soup2 = BeautifulSoup(html2,'lxml')
+
+result2 = soup2.find_all(class_='ve')
+#print(result1[0].string)
+
+result12 = soup2.find_all(attrs={"class":"ve-txt"})
+#print(result12[0])
+
+result12 = str(result12)
+soup12 = BeautifulSoup(result12,'lxml')
+
+result13 = soup12.find_all('em')
+userRecommendRate = result13[0].string
+hRating = result13[1].string
+eRating = result13[2].string
+sRating = result13[3].string
+iRating = result13[4].string
+
+print("用户推荐为:{}".format(userRecommendRate))
+print("卫生评分为:{}分".format(hRating))
+print("环境评分为:{}分".format(eRating))
+print("服务评分为:{}分".format(sRating))
+print("设施评分为:{}分".format(iRating))
+
+result20 = soup2.find_all(attrs={"class":"hotel-cell-num"})
+
+#print(userName[1])
+result20 = str(result20[1])
+soup22 = BeautifulSoup(result20,'lxml')
+result22 = soup22.find_all('p')
+for i in range(0,10):
+    userName = result22[i].get_text()
+    result22 = soup2.find_all(attrs={"itemprop":"datePublished"})
+    datePublished = result22[i].string
+    print("用户{}评论发表于:{}".format(userName,datePublished))
+
+    result21 = soup2.find_all(attrs={"itemprop":"ratingValue"})
+    userRating = result21[i].string
+    print("评分为:{}".format(userRating))
+
+    result23 = soup2.find_all(attrs={"class":"tree-ellips-line6 js_arr"})
+    commentText = result23[i].get_text()
+    print("评论内容为:{}".format(commentText))
+
+    '''
+        数据库操作
+    '''
+
+    #获取数据库链接
+    connection  = pymysql.connect(host = 'localhost',
+                              user = 'root',
+                              password = '123456',
+                              db = 'xiecheng',
+                              charset = 'utf8mb4')
+    try:
+        #获取会话指针
+        with connection.cursor() as cursor:
+            #创建sql语句
+            sql = "insert into `macro-polo` (`hotelName`,`userRecommendRate`,`hRating`,`eRating`,`sRating`,`iRating`,`userName`,`datePublished`,`userRating`,`commentText`) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+
+            #执行sql语句
+            cursor.execute(sql,(hotelName,userRecommendRate,hRating,eRating,sRating,iRating,userName,datePublished,userRating,commentText))
+
+            #提交数据库
+            connection.commit()
+    finally:
+        connection.close()
