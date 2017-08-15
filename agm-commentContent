@@ -1,0 +1,73 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug 15 16:44:15 2017
+
+@author: Administrator
+"""
+
+import urllib.request
+from bs4 import BeautifulSoup
+import time
+import random
+import pymysql.cursors
+
+
+def crawl(url,i):
+    
+    html1 = urllib.request.urlopen(url).read()
+    html1 = str(html1)
+    
+    soup1 = BeautifulSoup(html1,'lxml')
+    result1 = soup1.find_all(attrs={"class":"r-time"})
+    #print(result1)
+    result2 = soup1.find_all(attrs={"class":"buyer-feedback"})
+    result2 = str(result2)
+    
+    soup2 = BeautifulSoup(result2,'lxml')
+    result3 = soup2.find_all('span')
+    
+    
+    for j in range(0,10):
+        commentTime = result1[j].string
+        print(commentTime)
+        commentContent = result3[j].get_text()
+        print(commentContent)
+        
+        
+        '''
+        数据库操作
+        '''
+        
+        
+            
+        #获取数据库链接
+        connection  = pymysql.connect(host = 'localhost',
+                                  user = 'root',
+                                  password = '123456',
+                                  db = 'comment',
+                                  charset = 'utf8mb4')
+        try:
+            #获取会话指针
+            with connection.cursor() as cursor:
+                #创建sql语句
+                sql = "insert into `agm` (`commentTime`,`commentContent`) values (%s,%s)"
+                
+                #执行sql语句
+                cursor.execute(sql,(commentTime,commentContent))
+                
+                #提交数据库
+                connection.commit()
+        finally:
+            connection.close()
+        
+
+
+for i in range(1,26):
+    print("正在下载第{}页数据...".format(i))
+    #速卖通商品评论链接
+    url = "https://feedback.aliexpress.com/display/productEvaluation.htm?productId=32789025522&ownerMemberId=224795258&companyId=234539103&memberType=seller&startValidDate=&i18n=true&page=" + str(i)
+    crawl(url,i)
+    t = random.randint(11,16)
+    print("休眠时间为:{}s".format(t))
+    time.sleep(t)
+    
