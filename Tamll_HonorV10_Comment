@@ -1,0 +1,103 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Feb  1 18:10:52 2018
+
+@author: zch
+"""
+
+
+import requests
+import json
+import time
+import random
+import pymysql.cursors
+
+
+def crawlProductComment(url,page):
+
+    #商品评论的JSON数据
+    #url = 'https://rate.tmall.com/list_detail_rate.htm?itemId=562003579553&spuId=101717810&spuId=101717810&sellerId=1114511827&order=3&currentPage=1&append=⊙&content=1'
+    req = requests.get(url)
+    jsondata = req.text[15:]
+    data = json.loads(jsondata)
+    
+    #输出页面信息
+    print("正在获取第{}页的评论数据！".format(data['paginator']['page']))
+    j = 0
+    k = 0
+    #遍历评论信息列表
+    for i in data["rateList"]:
+        j = j + 1
+        if page < 10:
+            if j < 10:
+                k = '00' + str(page) + '0' + str(j)
+            else:
+                k = '00' + str(page) + str(j)
+        elif page < 100:
+            if j < 10:
+                k = '0' + str(page) + '0' + str(j)
+            else:
+                k = '0' + str(page) + str(j)
+        else:
+            if j < 10:
+                k = str(page) + '0' + str(j)
+            else:
+                k = str(page) + str(j)
+        #输出商品sku信息
+        auctionSku = i['auctionSku']
+        rateDate = i['rateDate']
+        rateContent = i['rateContent']
+        
+        info = i['appendComment']
+        if info:
+            appendCommentTime = info['commentTime']
+            appendCommentContent = info['content']
+        else:
+            appendCommentTime = ""
+            appendCommentContent = ""
+        
+        
+        print("第{}个商品的sku:{}".format(k,auctionSku))
+        #输出评论时间和评论内容
+        print("评论时间：{}".format(rateDate))
+        print("评论内容：{}".format(rateContent))
+        info = i['appendComment']
+        #判断是否有追加评论
+        if info:
+            print("追评时间:{}".format(appendCommentTime))
+            print("追评内容:{}".format(appendCommentContent))
+        print("-------------------------------------------------")
+        
+        '''
+        数据库操作
+        '''
+
+        #获取数据库链接
+        connection  = pymysql.connect(host = 'localhost',
+                                  user = 'root',
+                                  password = '123456',
+                                  db = 'tmall',
+                                  charset = 'utf8mb4')
+        try:
+            #获取会话指针
+            with connection.cursor() as cursor:
+                #创建sql语句
+                sql = "insert into `HonorV10_Comment` (`id`,`auctionSku`,`rateDate`,`rateContent`,`appendCommentTime`,`appendCommentContent`) values (%s,%s,%s,%s,%s,%s)"
+
+                #执行sql语句
+                cursor.execute(sql,(k,auctionSku,rateDate,rateContent,appendCommentTime,appendCommentContent))
+
+                #提交数据库
+                connection.commit()
+        finally:
+            connection.close()
+
+
+for i in range(1,31):
+    #print("正在获取第{}页评论数据!".format(i+1))
+    #获取荣耀V10评论JSON链接,通过更改page参数的值来循环读取多页评论信息
+    #itemId:"562003579553",sellerId:"1114511827",shopId:"101717810"
+    url = 'https://rate.tmall.com/list_detail_rate.htm?itemId=562003579553&spuId=101717810&spuId=101717810&sellerId=1114511827&order=3&currentPage=' + str(i) +'&append=⊙&content=1'
+    crawlProductComment(url,i)
+    #设置休眠时间
+    time.sleep(random.randint(32,66))
